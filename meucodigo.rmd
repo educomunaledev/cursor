@@ -706,7 +706,7 @@ Isso significa que **trocaremos e reordenaremos os nomes das colunas** para faze
 
 #Organizar colunas
 cobertura_vacinal = cobertura_vacinal %>% 
-  select(-"...1", type, name, country_abrev, continent, region, region_complete, year, everything())
+  select(type, name, country_abrev, continent, region, region_complete, year, everything())
 
 #Salvar
 cobertura_vacinal %>% 
@@ -1896,7 +1896,6 @@ mortes
 ```{r}
 mortes = mortes_doencas %>%
  filter( year == 2022, death_disease == 'Meningitis') %>%
-  mutate()
   select(name, year, total_deaths, death_rate_100thousand, death_disease) %>% 
   distinct() %>%
   drop_na(total_deaths) %>% 
@@ -1943,7 +1942,7 @@ filter( year == 2022, death_disease == 'Meningitis') %>%
 dados$name <- reorder(dados$name, dados$total_deaths)
 
 
-ggplot(data = dados, aes(x = name, y = death_disease, fill = continent)) +
+ggplot(data = dados, aes(x = name, y = total_deaths, fill = continent)) +
   geom_col() +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 90, hjust = 1),
@@ -1965,7 +1964,7 @@ filter( year == 2022, death_disease == 'Meningitis') %>%
 dados$name <- reorder(dados$name, dados$total_deaths)
 
 
-ggplot(data = dados, aes(x = name, y = death_disease , fill = continent)) +
+ggplot(data = dados, aes(x = name, y = total_deaths , fill = continent)) +
   geom_col() +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 90, hjust = 1),
@@ -2021,19 +2020,21 @@ library(dplyr)
 library(ggplot2)
 
 dados_tuberculose <- mortes_doencas %>% 
-  filter(death_disease == 'Tuberculosis', region_complete == "Latin America and Caribbean") %>%
+  filter(year == 2022, death_disease == 'Tuberculosis') %>%
   select(name, year, total_deaths, continent, death_disease) %>% 
   distinct() %>%
-  drop_na(total_deaths)
+  drop_na(total_deaths) %>% 
+  mutate(name = fct_reorder(name, total_deaths))  
+  
 
-dados_tuberculose$name <- reorder(dados_tuberculose$name, dados_tuberculose$total_deaths)
 
-ggplot(data = dados_tuberculose, aes(x = name, y = total_deaths, fill = continent)) +
+dados_tuberculose %>% 
+  ggplot(aes(x = name, y = total_deaths, fill = continent)) +
   geom_col() +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 90, hjust = 1),
         plot.title = element_text(hjust = 0.5)) +  
-  labs(title = "Mortes por Tuberculosis 2000 - 2023", x = "País", y = "Total de Mortes")
+  labs(title = "Mortes por Tuberculosis 2022", x = "País", y = "Total de Mortes")
 
 
 ```
@@ -2045,7 +2046,7 @@ library(dplyr)
 library(ggplot2)
 
 dados3 <- cobertura_vacinal %>%
-  filter(name %in% c('Mexico', 'Brazil')) %>% 
+  filter(year == 2022, name %in% c('Mexico', 'Brazil')) %>% 
   select(name, year, continent, coverage, vaccine) %>%
   distinct() %>%
   drop_na(coverage)
@@ -2058,7 +2059,10 @@ ggplot(data = dados3, aes(x = name, y = coverage, fill = name)) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 90, hjust = 1),
         plot.title = element_text(hjust = 0.5)) +
-  labs(title = "Cobertura Vacinal: México, Brasil e Outros Países", x = "País", y = "Vacinação")
+  labs(title = "Cobertura Vacinal: México, Brasil e Outros Países", x = "País", y = "Vacinação") +
+
+facet_wrap(~ vaccine)
+
 
 
 
@@ -2071,7 +2075,7 @@ library(ggplot2)
 
 # Filtrar e selecionar os dados
 dados3 <- cobertura_vacinal %>%
-  filter(continent == "Latin America and Caribbean") %>%
+  filter(vaccine == 'BCG', continent == "Americas") %>%
   select(name, year, coverage) %>%
   distinct() %>%
   drop_na(coverage)
@@ -2086,19 +2090,50 @@ dados3 <- dados3 %>%
 # Agregar dados para "Outros"
 dados3 <- dados3 %>%
   group_by(name, year) %>%
-  summarise(coverage = sum(coverage)) %>%
+  summarise(coverage = mean(coverage)) %>%
   ungroup()
 
 # Reordenar "Outros" para o final
 dados3$name <- factor(dados3$name, levels = c('Mexico', 'Brazil', 'Outros'))
 
 # Plotar o gráfico de barras
-ggplot(data = dados3, aes(x = name, y = coverage, fill = name)) +
-  geom_col() +
-  scale_fill_manual(values = c('Mexico' = 'blue', 'Brazil' = 'green', 'Outros' = 'gray')) +
+ggplot(data = dados3, aes(x = year, y = coverage, color = name)) +
+  geom_line(size = 2) +
+  scale_color_manual(values = c('Mexico' = 'blue', 'Brazil' = 'green', 'Outros' = 'gray')) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 90, hjust = 1),
         plot.title = element_text(hjust = 0.5)) +
   labs(title = "Cobertura Vacinal: México, Brasil e Outros Países", x = "País", y = "Vacinação")
 
+# Sempre que usar o gpt pedir para fazer como se fosse no tidyverse
+
 ```
+```{r}
+library(tidyverse)
+
+# Filtrar e selecionar os dados
+dados3 <- cobertura_vacinal %>%
+  filter(vaccine == 'BCG', continent == "Americas") %>%
+  select(name, year, coverage) %>%
+  distinct() %>%
+  drop_na(coverage) %>% 
+  mutate(name = if_else(name %in% c('Mexico', 'Brazil'), name, 'Outros')) %>%
+  group_by(name, year) %>%
+  summarise(coverage = mean(coverage)) %>%
+  ungroup()
+
+# Reordenar "Outros" para o final
+dados3 <- dados3 %>%
+  mutate(name = fct_relevel(factor(name), 'Mexico', 'Brazil', 'Outros'))
+
+# Plotar o gráfico de linhas
+ggplot(data = dados3, aes(x = year, y = coverage, color = name)) +
+  geom_line(size = 2) +
+  scale_color_manual(values = c('Mexico' = 'blue', 'Brazil' = 'green', 'Outros' = 'gray')) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1),
+        plot.title = element_text(hjust = 0.5)) +
+  labs(title = "Cobertura Vacinal: México, Brasil e Outros Países", x = "Ano", y = "Cobertura")
+
+```
+
