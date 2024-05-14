@@ -2236,6 +2236,7 @@ ggplot() +
        color = "Região",
        shape = "População") +
   scale_color_npg()
+
 ```
 
 Aparentemente, quando a cobertura vacinal para a **BCG** aumenta, a expectativa de vida também aumenta, e isso ocorre ao longo dos anos. Além disso, veja que, principalmente entre 1982 e 1992, os países seguem um comportamento bem parecido com o de uma reta na diagonal.
